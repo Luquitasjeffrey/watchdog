@@ -9,30 +9,39 @@ load_dotenv()
 api_id =int(os.getenv("TELEGRAM_API_ID"))
 api_hash = os.getenv("TELEGRAM_API_HASH")
 bot_username = "@lnp2pBot"
-TIMEOUT = 10  # segundos
-
-client = TelegramClient("watchdog", api_id, api_hash)
+response_timeout = int(os.getenv("TIMEOUT_SECONDS", "10"))
+max_attempts = int(os.getenv("ATTEMPTS_TO_REACH", "3"))
+ping_interval = int(os.getenv("PING_INTERVAL_SECONDS", "60"))
+chats_to_notify = [int(x) for x in os.getenv("TELEGRAM_CHATS_TO_NOTIFY", "").split(",") if x]
 
 async def main():
-    await client.start()
+    async with TelegramClient("watchdog", api_id, api_hash) as client:
 
-    response_event = asyncio.Event()
+        await client.start()
 
-    @client.on(events.NewMessage(from_users=bot_username))
-    async def handler(event):
-        if "pong" in event.raw_text.lower():
+        response_event = asyncio.Event()
+
+        @client.on(events.NewMessage(from_users=bot_username))
+        async def handler(event):
             response_event.set()
-        else:
-            print("Mensaje recibido del bot, pero no es una respuesta válida:", event.raw_text) 
+            print("Mensaje recibido del bot: ", event.raw_text) 
 
-    await client(SendMessageRequest(bot_username, "/ping"))
+        
+        attempts = 0
+        while True:
+            await client(SendMessageRequest(bot_username, "/ping"))
+            try:
+                await asyncio.wait_for(response_event.wait(), timeout=response_timeout)
+                attempts = 0
+            except asyncio.TimeoutError:
+                attempts += 1
+            
+                if attempts >= max_attempts:
+                    for chat_id in chats_to_notify:
+                        await client.send_message(chat_id, f"⚠️ No se recibió respuesta del bot {bot_username} después de {max_attempts} intentos.")
+                    attempts = 0
 
-    try:
-        await asyncio.wait_for(response_event.wait(), timeout=TIMEOUT)
-        print("OK: el bot respondió /ping")
-    except asyncio.TimeoutError:
-        print("FAIL: el bot NO respondió /ping")
+            await asyncio.sleep(ping_interval)
 
-    await client.disconnect()
 
 asyncio.run(main())

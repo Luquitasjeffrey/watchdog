@@ -1,0 +1,45 @@
+# Watchdog Bot Monitor
+
+## Overview
+
+This watchdog keeps checking if `@lnp2pBot` is online and responsive. If the bot doesn't respond, it notifies specified groups to alert about the issue.
+
+## What It Does
+
+1. **Monitors Bot Status**: Continuously checks if `@lnp2pBot` is online by sending a `/ping` command
+2. **Detects Outages**: Waits for a "pong" response with a configurable timeout (default: 10 seconds)
+3. **Alerts on Failure**: Sends notifications to configured groups when the bot is unresponsive
+
+## How It Works
+
+- Sends a `/ping` command to `@lnp2pBot`
+- Listens for a response containing "pong" within the timeout window
+- If the bot responds: logs "OK: el bot respondió /ping"
+- If the bot doesn't respond: logs "FAIL: el bot NO respondió /ping" and notifies groups
+
+## Installation
+
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+2. Configure environment variables in `.env`:
+```
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+TELEGRAM_CHATS_TO_NOTIFY=<chat_id1>,<chat_id2>,...
+```
+Take as reference .env.sample
+
+## Usage
+
+```bash
+python main.py
+```
+
+## Configuration
+
+- **Timeout**: Currently set to 10 seconds (modify `TIMEOUT` variable in `main.py`)
+- **Bot Username**: Configured to check `@lnp2pBot` (modify `bot_username` variable as needed)
+- **Notification Groups**: Configure target groups for alerts when bot is down
